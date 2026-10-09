@@ -21,7 +21,12 @@ namespace LeoVR.Weapons
         float yaw;
         bool initialized;
 
-        void Update()
+        void OnEnable() => Application.onBeforeRender += Follow;
+        void OnDisable() => Application.onBeforeRender -= Follow;
+        void Update() => Follow();
+        void LateUpdate() => Follow();
+
+        void Follow()
         {
             if (!head)
             {
@@ -37,7 +42,7 @@ namespace LeoVR.Weapons
             if (!initialized) { yaw = headYaw; initialized = true; }
             float diff = Mathf.Abs(Mathf.DeltaAngle(yaw, headYaw));
             float speed = diff > yawDeadZone ? yawFollowSpeed : yawFollowSpeed * 0.15f;
-            yaw = Mathf.LerpAngle(yaw, headYaw, Mathf.Clamp01(Time.deltaTime * speed));
+            yaw = Mathf.LerpAngle(yaw, headYaw, Mathf.Clamp01(Time.deltaTime * speed * 0.5f));
 
             var rot = Quaternion.Euler(0f, yaw, 0f);
             transform.SetPositionAndRotation(head.position + Vector3.down * waistDrop - rot * Vector3.forward * backOffset, rot);

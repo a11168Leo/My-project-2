@@ -37,6 +37,7 @@ namespace LeoVR.Weapons.EditorTools
             EnsureFolders();
             CreateMaterials();
             CreateModelMaterials();
+            CreateAKMaterials();
 
             var casing9 = Save(BuildCasing("Capsula_9mm", 0.0099f, 0.019f, false));
             var round9 = Save(BuildCasing("Bala_9mm", 0.0099f, 0.019f, true));
@@ -45,15 +46,26 @@ namespace LeoVR.Weapons.EditorTools
             var hole = Save(BuildBulletHole());
             var fx = Save(BuildImpactFx());
             var magGlock = Save(BuildGlockMag());
-            var magM4 = Save(BuildStanagMag());
             var glock = Save(BuildGlock(casing9, round9, hole, fx));
-            var m4 = Save(BuildM4(casing556, round556, hole, fx));
+            GameObject magM4, m4;
+            if (HasAKModel)
+            {
+                var casing762 = Save(BuildCasingModel762("Capsula_762", false));
+                var round762 = Save(BuildCasingModel762("Bala_762", true));
+                magM4 = Save(BuildAKMag());
+                m4 = Save(BuildAK(casing762, round762, hole, fx));
+            }
+            else
+            {
+                magM4 = Save(BuildStanagMag());
+                m4 = Save(BuildM4(casing556, round556, hole, fx));
+            }
             var baton = Save(BuildBaton());
             var dummy = Save(BuildDummy());
 
             PlaceInScene(glock, m4, baton, magGlock, magM4, dummy);
             AssetDatabase.SaveAssets();
-            Debug.Log("[Armas] Arsenal construído: Glock 17, M4A1, cassetete, carregadores, alvos e equipamento do corpo.");
+            Debug.Log("[Armas] Arsenal construído: Glock 17, " + (HasAKModel ? "AK-47" : "M4A1") + ", cassetete, carregadores, alvos e equipamento do corpo.");
         }
 
         // ------------------------------------------------------------------ pastas / materiais
@@ -187,7 +199,50 @@ namespace LeoVR.Weapons.EditorTools
         // ------------------------------------------------------------------ modelos reais (Armas/Modelos)
         const string GlockModel = RootDir + "/Modelos/Glock17/Glock17_Modelo.fbx";
         const string GlockTex = RootDir + "/Modelos/Glock17/Texturas/";
-        static Material mGlock, mGlockSights, mAmmo;
+        static Material mGlock, mGlockSights, mAmmo, mAK, mCase762, mBullet762;
+        const string AKModel = RootDir + "/Modelos/AK47/AK47_Modelo.fbx";
+        const string AKTex = RootDir + "/Modelos/AK47/Texturas/";
+        const string Ammo762 = RootDir + "/Modelos/Municao762/Municao_762.fbx";
+        const string Ammo762Tex = RootDir + "/Modelos/Municao762/Texturas/";
+        static bool HasAKModel => AssetDatabase.LoadAssetAtPath<GameObject>(AKModel) != null;
+        static bool Has762 => AssetDatabase.LoadAssetAtPath<GameObject>(Ammo762) != null;
+
+        static void BakeAxisOf(string path)
+        {
+            var mi = AssetImporter.GetAtPath(path) as ModelImporter;
+            if (mi != null && !mi.bakeAxisConversion) { mi.bakeAxisConversion = true; mi.SaveAndReimport(); }
+        }
+        static void NormalMap(string path)
+        {
+            var ti = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (ti != null && ti.textureType != TextureImporterType.NormalMap) { ti.textureType = TextureImporterType.NormalMap; ti.SaveAndReimport(); }
+        }
+        static void CreateAKMaterials()
+        {
+            if (HasAKModel)
+            {
+                BakeAxisOf(AKModel);
+                NormalMap(AKTex + "AK47_Normal.png");
+                mAK = Lit("AK47_Modelo", Color.white, 1f, 1f);
+                mAK.SetTexture("_BaseMap", AssetDatabase.LoadAssetAtPath<Texture2D>(AKTex + "AK47_Base.png"));
+                var ms = AssetDatabase.LoadAssetAtPath<Texture2D>(AKTex + "AK47_MetalSmooth.png");
+                if (ms) { mAK.SetTexture("_MetallicGlossMap", ms); mAK.EnableKeyword("_METALLICSPECGLOSSMAP"); }
+                var nm = AssetDatabase.LoadAssetAtPath<Texture2D>(AKTex + "AK47_Normal.png");
+                if (nm) { mAK.SetTexture("_BumpMap", nm); mAK.EnableKeyword("_NORMALMAP"); }
+                var ao = AssetDatabase.LoadAssetAtPath<Texture2D>(AKTex + "AK47_AO.png");
+                if (ao) { mAK.SetTexture("_OcclusionMap", ao); mAK.EnableKeyword("_OCCLUSIONMAP"); }
+                EditorUtility.SetDirty(mAK);
+            }
+            if (Has762)
+            {
+                BakeAxisOf(Ammo762);
+                mCase762 = Lit("Capsula_762", Color.white, 0.7f, 0.45f);
+                mCase762.SetTexture("_BaseMap", AssetDatabase.LoadAssetAtPath<Texture2D>(Ammo762Tex + "Capsula762_Base.png"));
+                mBullet762 = Lit("Projetil_762", Color.white, 0.8f, 0.5f);
+                mBullet762.SetTexture("_BaseMap", AssetDatabase.LoadAssetAtPath<Texture2D>(Ammo762Tex + "Projetil762_Base.png"));
+                EditorUtility.SetDirty(mCase762); EditorUtility.SetDirty(mBullet762);
+            }
+        }
         const string AmmoModel = RootDir + "/Modelos/Municao9mm/Municao_9mm.fbx";
         const string AmmoTex = RootDir + "/Modelos/Municao9mm/Texturas/";
         static bool HasAmmoModel => AssetDatabase.LoadAssetAtPath<GameObject>(AmmoModel) != null;
@@ -228,7 +283,7 @@ namespace LeoVR.Weapons.EditorTools
         }
 
         /// <summary>Copia uma peça (objeto filho) de um FBX para dentro de 'parent', com os materiais certos.</summary>
-        static GameObject ModelPart(string fbxPath, string partName, Transform parent, Material overrideMat = null)
+        static GameObject ModelPart(string fbxPath, string partName, Transform parent, Material overrideMat = null, Material altMat = null, string altKey = null)
         {
             var asset = AssetDatabase.LoadAssetAtPath<GameObject>(fbxPath);
             if (asset == null) return null;
@@ -247,7 +302,8 @@ namespace LeoVR.Weapons.EditorTools
             {
                 var mats = r.sharedMaterials;
                 for (int i = 0; i < mats.Length; i++)
-                    mats[i] = overrideMat != null ? overrideMat
+                    mats[i] = (altKey != null && mats[i] != null && mats[i].name.ToLowerInvariant().Contains(altKey)) ? altMat
+                            : overrideMat != null ? overrideMat
                             : (mats[i] != null && mats[i].name.ToLowerInvariant().Contains("lambert4")) ? mGlockSights : mGlock;
                 r.sharedMaterials = mats;
             }
@@ -492,7 +548,8 @@ namespace LeoVR.Weapons.EditorTools
             var trigPos = real ? new Vector3(0, -0.0134f, 0.0845f) : new Vector3(0, -0.033f, 0.088f);
             float muzzleZ = real ? 0.198f : 0.19f;
 
-            var attach = Empty("Attach_Mao", R, real ? new Vector3(0, -0.062f, 0.034f) : new Vector3(0, -0.065f, 0.03f));
+            // a luva tem a palma 2 cm abaixo e 5 cm atrás do ponto do comando: o punho fica na palma
+            var attach = Empty("Attach_Mao", R, real ? new Vector3(0, -0.047f, 0.085f) : new Vector3(0, -0.045f, 0.08f));
             var cols = real
                 ? new List<Collider>
                 {
@@ -749,6 +806,144 @@ namespace LeoVR.Weapons.EditorTools
             return root;
         }
 
+        static GameObject BuildCasingModel762(string name, bool live)
+        {
+            var root = new GameObject(name);
+            if (Has762) ModelPart(Ammo762, live ? "Bala_762" : "Capsula_762", root.transform, mCase762, mBullet762, "lambert3");
+            else CylZ("Casquilho", root.transform, Vector3.zero, 0.0112f, live ? 0.056f : 0.039f, mBrass);
+            var col = root.AddComponent<CapsuleCollider>();
+            col.direction = 2; col.radius = 0.0056f; col.height = live ? 0.056f : 0.039f; col.contactOffset = 0.001f;
+            AddRb(root, live ? 0.016f : 0.007f, CollisionDetectionMode.ContinuousDynamic);
+            root.AddComponent<Casing>();
+            return root;
+        }
+
+        // ------------------------------------------------------------------ CARREGADOR AK (30 x 7.62x39, curvo)
+        static GameObject BuildAKMag()
+        {
+            var root = new GameObject("Carregador_AK");
+            var R = root.transform;
+            ModelPart(AKModel, "AK_Carregador", R, mAK);
+            var top = Empty("BalaTopo", R, Vector3.zero);
+            if (Has762)
+            {
+                var r = ModelPart(Ammo762, "Bala_762", top, mCase762, mBullet762, "lambert3");
+                if (r) r.transform.localPosition = new Vector3(0, -0.007f, 0.004f);
+            }
+            var col = root.AddComponent<BoxCollider>();
+            col.center = new Vector3(0, -0.095f, 0.03f);
+            col.size = new Vector3(0.032f, 0.2f, 0.085f);
+            AddRb(root, 0.33f);
+            var mag = root.AddComponent<Magazine>();
+            mag.magazineType = "AK762";
+            mag.capacity = 30;
+            mag.rounds = 30;
+            mag.topRoundVisual = top.gameObject;
+            SetupGrab(mag, Empty("Attach", R, new Vector3(0, -0.1f, 0.02f)), new Collider[] { col }, XRBaseInteractable.MovementType.Instantaneous);
+            root.AddComponent<HolsterItem>().slot = "Mag_AK";
+            root.AddComponent<IgnorePlayerCollision>();
+            return root;
+        }
+
+        // ------------------------------------------------------------------ AK-47 (880 mm, ~3.6 kg carregada)
+        static GameObject BuildAK(GameObject casing, GameObject live, GameObject hole, GameObject fx)
+        {
+            var root = new GameObject("AK47");
+            var R = root.transform;
+            var gripEuler = new Vector3(17.1f, 0, 0);
+            var gripPos = new Vector3(0, -0.0953f, -0.1641f);
+            // palma da luva: 2 cm abaixo e 5 cm atrás do ponto do comando
+            var attach = Empty("Attach_Mao", R, gripPos + new Vector3(0, 0.02f, 0.05f));
+            var attach2 = Empty("Attach_GuardaMao", R, new Vector3(0, -0.03f, 0.17f));
+            var cols = new List<Collider>
+            {
+                BoxCol("Col_Punho", R, gripPos, new Vector3(0.035f, 0.11f, 0.05f), gripEuler),
+                BoxCol("Col_Receptor", R, new Vector3(0, 0.008f, -0.07f), new Vector3(0.044f, 0.075f, 0.26f)),
+                BoxCol("Col_GuardaMao_Cano", R, new Vector3(0, 0.0f, 0.27f), new Vector3(0.05f, 0.06f, 0.4f)),
+                BoxCol("Col_Coronha", R, new Vector3(0, -0.03f, -0.31f), new Vector3(0.045f, 0.12f, 0.2f)),
+            };
+            var pivot = Empty("RecoilPivot", R, gripPos);
+            var M = Empty("Modelo", pivot, -gripPos);
+            ModelPart(AKModel, "AK_Armacao", M, mAK);
+            var trig = Empty("Gatilho", M, new Vector3(-0.0006f, -0.0322f, -0.1006f));
+            ModelPart(AKModel, "AK_Gatilho", trig, mAK);
+            var sel = Empty("Seletor", M, new Vector3(0.0212f, -0.009f, -0.1416f));
+            ModelPart(AKModel, "AK_Seletor", sel, mAK);
+
+            // alavanca de carregar (lado direito) — na AK recua a cada tiro
+            var ch = Empty("Alavanca_Carregar", M, Vector3.zero);
+            ModelPart(AKModel, "AK_Alavanca", ch, mAK);
+            var chCol = ch.gameObject.AddComponent<BoxCollider>();
+            chCol.center = new Vector3(0.04f, 0.018f, 0.045f);
+            chCol.size = new Vector3(0.045f, 0.045f, 0.07f);
+            var chInter = ch.gameObject.AddComponent<XRSimpleInteractable>();
+            chInter.colliders.Clear();
+            chInter.colliders.Add(chCol);
+            var sh = ch.gameObject.AddComponent<SlideHandle>();
+            sh.movingPart = ch;
+            sh.pullDirection = Vector3.back;
+            sh.travel = 0.11f;
+            sh.reciprocatesOnFire = true;
+            sh.cycleDuration = 0.07f;
+
+            var muzzle = Empty("Boca", M, new Vector3(0, 0, 0.472f));
+            MuzzleFlash(muzzle, 0.1f, out var flash, out var light);
+            var eject = Empty("Ejecao", M, new Vector3(0.026f, 0.015f, 0.0f));
+
+            var wellT = Empty("Encaixe_Carregador", M, new Vector3(-0.0006f, -0.1183f, 0.0057f));
+            var sc = wellT.gameObject.AddComponent<SphereCollider>();
+            sc.isTrigger = true; sc.radius = 0.06f; sc.center = new Vector3(0, 0.05f, 0);
+            var well = wellT.gameObject.AddComponent<MagazineWell>();
+            well.magazineType = "AK762";
+            well.attachTransform = wellT;
+            well.showInteractableHoverMeshes = false;
+
+            AddRb(root, 3.6f);
+            var grab = root.AddComponent<XRGrabInteractable>();
+            SetupGrab(grab, attach, cols, XRBaseInteractable.MovementType.Instantaneous);
+            grab.selectMode = InteractableSelectMode.Multiple;
+            grab.secondaryAttachTransform = attach2;
+
+            var fw = root.AddComponent<Firearm>();
+            fw.weaponName = "AK-47";
+            fw.damage = 45f;
+            fw.muzzleVelocity = 715f;
+            fw.roundsPerMinute = 600f;
+            fw.spreadDegrees = 0.08f;
+            fw.bulletHoleSize = 0.009f;
+            fw.fireModes = new[] { Firearm.FireMode.Safe, Firearm.FireMode.Auto, Firearm.FireMode.Semi }; // ordem da AK
+            fw.fireModeIndex = 2;
+            fw.selectorVisual = sel;
+            fw.selectorAngles = new[] { 0f, -16f, -32f };
+            fw.triggerVisual = trig;
+            fw.muzzle = muzzle;
+            fw.ejectionPort = eject;
+            fw.recoilPivot = pivot;
+            fw.magazineWell = well;
+            fw.slide = sh;
+            fw.lockOpenOnEmpty = false; // a AK não trava aberta no fim do carregador
+            fw.recoilBack = 0.025f;
+            fw.recoilRise = 4.5f;
+            fw.recoilYaw = 1.5f;
+            fw.recoilRoll = 1.2f;
+            fw.twoHandRecoilMultiplier = 0.35f;
+            fw.recoverTime = 0.09f;
+            fw.muzzleFlash = flash;
+            fw.muzzleLight = light;
+            fw.casingPrefab = casing;
+            fw.liveRoundPrefab = live;
+            fw.bulletHolePrefab = hole;
+            fw.impactFxPrefab = fx;
+            fw.shotPitch = 0.8f;
+            fw.shotBody = 1.15f;
+            fw.shotVolume = 1f;
+            sh.firearm = fw;
+            well.firearm = fw;
+            root.AddComponent<HolsterItem>().slot = "Rifle";
+            root.AddComponent<IgnorePlayerCollision>();
+            return root;
+        }
+
         // ------------------------------------------------------------------ CASSETETE (53 cm)
         static GameObject BuildBaton()
         {
@@ -896,7 +1091,7 @@ namespace LeoVR.Weapons.EditorTools
             pouchA.spareMagazines = 4;
             foreach (var x in new[] { -0.1f, -0.025f })
             {
-                var p = Socket("Bolsa_Carregador_M4", RR, new Vector3(x, 0.25f, 0.15f), Vector3.zero, "Mag_STANAG", 0.07f, new Vector3(0.03f, 0.1f, 0.075f));
+                var p = Socket("Bolsa_Carregador_Espingarda", RR, new Vector3(x, 0.25f, 0.15f), Vector3.zero, magM4.GetComponent<HolsterItem>().slot, 0.08f, new Vector3(0.035f, 0.1f, 0.08f));
                 var pouch = p.gameObject.AddComponent<AmmoPouch>();
                 pouch.magazinePrefab = magM4.GetComponent<Magazine>();
                 pouch.spareMagazines = 3;

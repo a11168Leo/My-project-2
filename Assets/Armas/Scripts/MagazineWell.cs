@@ -85,6 +85,31 @@ namespace LeoVR.Weapons
             }
         }
 
+        [Tooltip("Distância (m) entre o topo do carregador e o encaixe para ele trancar")]
+        public float insertDistance = 0.06f;
+        readonly Collider[] nearby = new Collider[16];
+
+        /// <summary>
+        /// Encaixe por proximidade: se a mão aproximar o topo do carregador certo do poço
+        /// (mais ou menos alinhado), ele tranca — mesmo que os triggers de física falhem.
+        /// </summary>
+        void Update()
+        {
+            if (hasSelection || Time.time < blockedUntil || interactionManager == null) return;
+            var at = attachTransform ? attachTransform : transform;
+            Vector3 topWhenInserted = at.position + at.up * 0.1f;
+            int n = Physics.OverlapSphereNonAlloc(topWhenInserted, 0.12f, nearby, ~0, QueryTriggerInteraction.Ignore);
+            for (int i = 0; i < n; i++)
+            {
+                var m = nearby[i] ? nearby[i].GetComponentInParent<Magazine>() : null;
+                if (m == null || m.magazineType != magazineType || m.IsInserted) continue;
+                if (Vector3.Distance(m.transform.position, topWhenInserted) > insertDistance) continue;
+                if (Vector3.Angle(m.transform.up, at.up) > maxInsertAngle) continue;
+                interactionManager.SelectEnter((IXRSelectInteractor)this, (IXRSelectInteractable)m);
+                break;
+            }
+        }
+
         /// <summary>Larga o carregador (botão A/X).</summary>
         public void Eject(Vector3 gunVelocity)
         {

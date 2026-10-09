@@ -1,0 +1,3 @@
+AK-47 Kalashnikov (Sketchfab, ak-47-kalashnikov.zip)
+Autor/link/licença: (preencher)
+Alterações: separada em armação, carregador, alavanca de carregar, gatilho e seletor; subdividida 1x e reduzida; texturas 2K.

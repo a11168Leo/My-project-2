@@ -31,10 +31,21 @@ namespace LeoVR.Weapons
             if (pending != null && Time.time < pendingTime + 1f) return;
             if (Time.time < nextTime) return;
 
+            if (pending != null && !pending.isSelected) Destroy(pending.gameObject); // não deixar carregadores perdidos
             var at = socket.attachTransform ? socket.attachTransform : transform;
             pending = Instantiate(magazinePrefab, at.position, at.rotation);
             pendingTime = Time.time;
             spareMagazines--;
+            StartCoroutine(Attach(pending));
+        }
+
+        System.Collections.IEnumerator Attach(Magazine m)
+        {
+            yield return null; // espera 1 frame para o carregador se registar no XR Interaction Manager
+            if (m != null && !m.isSelected && !socket.hasSelection && socket.interactionManager != null)
+                socket.interactionManager.SelectEnter(
+                    (UnityEngine.XR.Interaction.Toolkit.Interactors.IXRSelectInteractor)socket,
+                    (UnityEngine.XR.Interaction.Toolkit.Interactables.IXRSelectInteractable)m);
         }
     }
 }
