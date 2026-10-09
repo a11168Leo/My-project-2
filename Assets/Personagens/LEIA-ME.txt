@@ -1,0 +1,3 @@
+PERSONAGENS DO JOGADOR
+- Militar/ : modelo do militar (Tencent) + Luvas.fbx (mãos)
+Quando tiveres a versão do Mixamo (com esqueleto), mete-a em Personagens/Militar/Mixamo/

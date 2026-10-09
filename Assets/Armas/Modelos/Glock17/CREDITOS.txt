@@ -1,0 +1,5 @@
+Modelo: Glock (Sketchfab) — ficheiro original "pistol_1.zip" (glock_model.fbx)
+Autor: (preencher com o nome do autor no Sketchfab)
+Link: (preencher com o link da página do modelo)
+Licença: (ver na página do Sketchfab: CC BY exige pôr o nome do autor nos créditos do jogo)
+Alterações: separado em armação, slide, carregador e gatilho; alinhado ao referencial da arma do jogo.

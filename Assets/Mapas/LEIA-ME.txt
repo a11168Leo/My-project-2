@@ -1,0 +1,4 @@
+MAPAS
+Um subpasta por mapa: Mapas/Cidade/, Mapas/Deserto/...
+Dentro: a cena (.unity), Modelos/, Texturas/, Materiais/.
+As cenas antigas continuam em Assets/Scenes (inicio = cidade, Campo_Teste = chão plano).

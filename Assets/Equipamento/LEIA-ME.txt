@@ -1,0 +1,3 @@
+COSMÉTICOS / EQUIPAMENTO
+- Capacetes/, Luvas/, Roupas/, Coletes/ : um FBX por item + texturas
+Os itens de roupa têm de usar o MESMO esqueleto do personagem (Mixamo).

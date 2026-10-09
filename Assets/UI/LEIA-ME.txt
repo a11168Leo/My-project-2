@@ -1,0 +1,4 @@
+MENUS E INTERFACE
+- Menus/   : menu inicial, configurações, escolha de mapa e dificuldade
+- Icones/  : ícones das armas e do equipamento
+- Fontes/

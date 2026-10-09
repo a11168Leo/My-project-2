@@ -1,0 +1,2 @@
+Um subpasta por arma: Glock17/, M4A1/, AK47/... Dentro: o .fbx e a pasta Texturas/.
+Guarda também o ficheiro de licença/créditos (ex: CREDITOS.txt com o link do Sketchfab e o autor).

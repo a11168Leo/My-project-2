@@ -1,0 +1,5 @@
+SONS
+- Armas/     : tiros, recarregar, slide (podes substituir os sons gerados por código)
+- Ambiente/  : vento, cidade, pássaros
+- Musica/    : música do menu
+- UI/        : cliques dos botões

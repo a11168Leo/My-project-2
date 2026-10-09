@@ -1,0 +1,3 @@
+Luvas SRG (OBJ enviado pelo Leonardo, srg-glove.zip)
+Autor/licença: (preencher com o link e o autor de onde foi descarregado)
+Alterações: reduzido para ~23k triângulos, mão esquerda criada em espelho, texturas 2K.

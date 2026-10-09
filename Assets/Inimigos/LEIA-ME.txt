@@ -1,0 +1,5 @@
+INIMIGOS / BOTS
+- Modelos/    : personagens dos inimigos (FBX já com esqueleto do Mixamo)
+- Animacoes/  : animações (andar, correr, disparar, morrer)
+- Prefabs/    : inimigos prontos a pôr no mapa
+- Scripts/    : inteligência artificial (patrulha, ataque, dificuldade)

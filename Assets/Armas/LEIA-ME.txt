@@ -1,0 +1,7 @@
+ARMAS
+- Scripts/   : código das armas (não mexer sem combinar)
+- Editor/    : ferramentas do menu Ferramentas > Armas
+- Modelos/   : um subpasta por arma com o .fbx e as texturas (ex: Modelos/Glock17/)
+- Prefabs/   : gerado automaticamente pelo construtor
+- Materiais/ e Texturas/ : gerados automaticamente
+Para pôr uma arma nova: cria Modelos/NomeDaArma/, mete lá o FBX e uma pasta Texturas/, e avisa o Claude.
