@@ -98,6 +98,26 @@ namespace LeoVR.Weapons
             return Create(key, d);
         }
 
+        /// <summary>Bala a acertar em aço: "ding" metálico longo.</summary>
+        public static AudioClip Ding()
+        {
+            const string key = "ding";
+            if (cache.TryGetValue(key, out var c)) return c;
+            int n = (int)(SR * 1.2f);
+            var d = new float[n];
+            var rnd = new System.Random(5);
+            for (int i = 0; i < n; i++)
+            {
+                float t = i / (float)SR;
+                float noise = (float)(rnd.NextDouble() * 2 - 1) * Mathf.Exp(-t * 200f);
+                d[i] = noise * 0.6f
+                     + Mathf.Sin(2f * Mathf.PI * 1180f * t) * Mathf.Exp(-t * 3.5f)
+                     + 0.6f * Mathf.Sin(2f * Mathf.PI * 2930f * t) * Mathf.Exp(-t * 5f)
+                     + 0.35f * Mathf.Sin(2f * Mathf.PI * 4410f * t) * Mathf.Exp(-t * 8f);
+            }
+            return Create(key, d);
+        }
+
         public static AudioClip Thud()
         {
             const string key = "thud";

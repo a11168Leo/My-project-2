@@ -66,20 +66,26 @@ namespace LeoVR.Weapons
             if (rb != null && !rb.isKinematic)
                 rb.AddForceAtPosition(dir * b.damage * 0.015f, hit.point, ForceMode.Impulse);
 
-            if (b.hole != null)
+            var surf = hit.collider.GetComponentInParent<SurfaceImpact>();
+            var holePrefab = surf != null && surf.holePrefab != null ? surf.holePrefab : b.hole;
+            var fxPrefab = surf != null && surf.fxPrefab != null ? surf.fxPrefab : b.fx;
+            float scale = b.holeSize * (surf != null ? surf.holeScale : 1f);
+
+            if (holePrefab != null)
             {
                 var rot = Quaternion.LookRotation(-hit.normal) * Quaternion.Euler(0, 0, Random.Range(0f, 360f));
-                var h = Instantiate(b.hole, hit.point + hit.normal * 0.0015f, rot);
-                h.transform.localScale = Vector3.one * b.holeSize;
-                if (rb != null) h.transform.SetParent(hit.transform, true);
-                Destroy(h, 30f);
+                var h = Instantiate(holePrefab, hit.point + hit.normal * 0.0015f, rot);
+                h.transform.localScale = Vector3.one * scale;
+                if (rb != null) h.transform.SetParent(rb.transform, true);
+                Destroy(h, 120f);
             }
-            if (b.fx != null)
+            if (fxPrefab != null)
             {
-                var fx = Instantiate(b.fx, hit.point, Quaternion.LookRotation(hit.normal));
+                var fx = Instantiate(fxPrefab, hit.point, Quaternion.LookRotation(Vector3.Reflect(dir, hit.normal) * 0.5f + hit.normal));
                 Destroy(fx, 2f);
             }
-            WeaponAudio.PlayAt(WeaponAudio.Impact(), hit.point, 0.5f, 0.15f, 30f);
+            bool metal = surf != null && surf.kind == SurfaceImpact.Kind.Metal;
+            WeaponAudio.PlayAt(metal ? WeaponAudio.Ding() : WeaponAudio.Impact(), hit.point, metal ? 0.9f : 0.5f, 0.1f, metal ? 120f : 30f);
         }
     }
 }

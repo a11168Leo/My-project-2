@@ -187,12 +187,29 @@ namespace LeoVR.Weapons.EditorTools
         // ------------------------------------------------------------------ modelos reais (Armas/Modelos)
         const string GlockModel = RootDir + "/Modelos/Glock17/Glock17_Modelo.fbx";
         const string GlockTex = RootDir + "/Modelos/Glock17/Texturas/";
-        static Material mGlock, mGlockSights;
+        static Material mGlock, mGlockSights, mAmmo;
+        const string AmmoModel = RootDir + "/Modelos/Municao9mm/Municao_9mm.fbx";
+        const string AmmoTex = RootDir + "/Modelos/Municao9mm/Texturas/";
+        static bool HasAmmoModel => AssetDatabase.LoadAssetAtPath<GameObject>(AmmoModel) != null;
 
         static bool HasGlockModel => AssetDatabase.LoadAssetAtPath<GameObject>(GlockModel) != null;
 
         static void CreateModelMaterials()
         {
+            if (HasAmmoModel)
+            {
+                var ai = AssetImporter.GetAtPath(AmmoModel) as ModelImporter;
+                if (ai != null && !ai.bakeAxisConversion) { ai.bakeAxisConversion = true; ai.SaveAndReimport(); }
+                var an = AssetImporter.GetAtPath(AmmoTex + "Municao9mm_Normal.png") as TextureImporter;
+                if (an != null && an.textureType != TextureImporterType.NormalMap) { an.textureType = TextureImporterType.NormalMap; an.SaveAndReimport(); }
+                mAmmo = Lit("Municao9mm", Color.white, 1f, 1f);
+                mAmmo.SetTexture("_BaseMap", AssetDatabase.LoadAssetAtPath<Texture2D>(AmmoTex + "Municao9mm_Base.png"));
+                var ams = AssetDatabase.LoadAssetAtPath<Texture2D>(AmmoTex + "Municao9mm_MetalSmooth.png");
+                if (ams) { mAmmo.SetTexture("_MetallicGlossMap", ams); mAmmo.EnableKeyword("_METALLICSPECGLOSSMAP"); }
+                var anm = AssetDatabase.LoadAssetAtPath<Texture2D>(AmmoTex + "Municao9mm_Normal.png");
+                if (anm) { mAmmo.SetTexture("_BumpMap", anm); mAmmo.EnableKeyword("_NORMALMAP"); }
+                EditorUtility.SetDirty(mAmmo);
+            }
             if (!HasGlockModel) return;
             var mi = AssetImporter.GetAtPath(GlockModel) as ModelImporter;
             if (mi != null && !mi.bakeAxisConversion) { mi.bakeAxisConversion = true; mi.SaveAndReimport(); }
@@ -211,7 +228,7 @@ namespace LeoVR.Weapons.EditorTools
         }
 
         /// <summary>Copia uma peça (objeto filho) de um FBX para dentro de 'parent', com os materiais certos.</summary>
-        static GameObject ModelPart(string fbxPath, string partName, Transform parent)
+        static GameObject ModelPart(string fbxPath, string partName, Transform parent, Material overrideMat = null)
         {
             var asset = AssetDatabase.LoadAssetAtPath<GameObject>(fbxPath);
             if (asset == null) return null;
@@ -230,7 +247,8 @@ namespace LeoVR.Weapons.EditorTools
             {
                 var mats = r.sharedMaterials;
                 for (int i = 0; i < mats.Length; i++)
-                    mats[i] = (mats[i] != null && mats[i].name.ToLowerInvariant().Contains("lambert4")) ? mGlockSights : mGlock;
+                    mats[i] = overrideMat != null ? overrideMat
+                            : (mats[i] != null && mats[i].name.ToLowerInvariant().Contains("lambert4")) ? mGlockSights : mGlock;
                 r.sharedMaterials = mats;
             }
             foreach (var c in go.GetComponentsInChildren<Collider>()) Object.DestroyImmediate(c);
@@ -326,8 +344,23 @@ namespace LeoVR.Weapons.EditorTools
         }
 
         // ------------------------------------------------------------------ munição / efeitos
+        static GameObject BuildCasingModel(string name, bool live)
+        {
+            var root = new GameObject(name);
+            ModelPart(AmmoModel, live ? "Bala_9mm" : "Capsula_9mm", root.transform, mAmmo);
+            var col = root.AddComponent<CapsuleCollider>();
+            col.direction = 2;
+            col.radius = 0.0049f;
+            col.height = live ? 0.0297f : 0.0192f;
+            col.contactOffset = 0.001f;
+            AddRb(root, live ? 0.012f : 0.007f, CollisionDetectionMode.ContinuousDynamic);
+            root.AddComponent<Casing>();
+            return root;
+        }
+
         static GameObject BuildCasing(string name, float dia, float len, bool live)
         {
+            if (Mathf.Abs(dia - 0.0099f) < 0.0001f && HasAmmoModel) return BuildCasingModel(name, live);
             var root = Prim(PrimitiveType.Cylinder, name, null, Vector3.zero, new Vector3(dia, len * 0.5f, dia), Vector3.zero, mBrass, true);
             if (live)
             {
@@ -392,8 +425,16 @@ namespace LeoVR.Weapons.EditorTools
                 Box("Base", R, new Vector3(0, -0.106f, 0), new Vector3(0.026f, 0.008f, 0.035f), mPolymer);
             }
             var top = Empty("BalaTopo", R, Vector3.zero);
-            CylZ("Casquilho", top, new Vector3(0, -0.004f, -0.003f), 0.0099f, 0.019f, mBrass);
-            Ball("Ponta", top, new Vector3(0, -0.004f, 0.008f), 0.0092f, mCopper);
+            if (HasAmmoModel)
+            {
+                var r9 = ModelPart(AmmoModel, "Bala_9mm", top, mAmmo);
+                if (r9) r9.transform.localPosition = new Vector3(0, -0.006f, 0.001f);
+            }
+            else
+            {
+                CylZ("Casquilho", top, new Vector3(0, -0.004f, -0.003f), 0.0099f, 0.019f, mBrass);
+                Ball("Ponta", top, new Vector3(0, -0.004f, 0.008f), 0.0092f, mCopper);
+            }
             var col = root.AddComponent<BoxCollider>();
             col.center = real ? new Vector3(0, -0.055f, 0.0015f) : new Vector3(0, -0.056f, 0);
             col.size = real ? new Vector3(0.03f, 0.115f, 0.047f) : new Vector3(0.024f, 0.112f, 0.033f);

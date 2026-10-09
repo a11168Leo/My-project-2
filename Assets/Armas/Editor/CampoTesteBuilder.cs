@@ -125,23 +125,8 @@ namespace LeoVR.Weapons.EditorTools
             }
             else Debug.LogWarning("[Campo Teste] Não encontrei " + CharDir + "/Militar.fbx");
 
-            // 7) Luvas no lugar dos comandos (luvas SRG se existirem; senão as do militar)
-            const string srgPath = "Assets/Equipamento/Luvas/SRG/Luvas_SRG.fbx";
-            BakeAxis(srgPath);
-            var srg = AssetDatabase.LoadAssetAtPath<GameObject>(srgPath);
-            var luvas = AssetDatabase.LoadAssetAtPath<GameObject>(CharDir + "/Luvas.fbx");
-            if (srg)
-            {
-                var gmat = GloveMaterial("Assets/Equipamento/Luvas/SRG");
-                AttachGlove(origin.transform, "Right Controller", "XR Controller Right", srg, "Luva_D", gmat, true);
-                AttachGlove(origin.transform, "Left Controller", "XR Controller Left", srg, "Luva_E", gmat, true);
-            }
-            else if (luvas)
-            {
-                AttachGlove(origin.transform, "Right Controller", "XR Controller Right", luvas, "Luva_D", mat, false);
-                AttachGlove(origin.transform, "Left Controller", "XR Controller Left", luvas, "Luva_E", mat, false);
-            }
-            else Debug.LogWarning("[Campo Teste] Não encontrei luvas.");
+            // 7) Luvas no lugar dos comandos
+            SetupGloves(origin.transform, mat);
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
@@ -149,7 +134,7 @@ namespace LeoVR.Weapons.EditorTools
         }
 
         /// <summary>FBX do Blender: converte os eixos na importação (o modelo fica de pé, sem rotação -90).</summary>
-        static void BakeAxis(string path)
+        public static void BakeAxis(string path)
         {
             var mi = AssetImporter.GetAtPath(path) as ModelImporter;
             if (mi != null && !mi.bakeAxisConversion)
@@ -157,6 +142,28 @@ namespace LeoVR.Weapons.EditorTools
                 mi.bakeAxisConversion = true;
                 mi.SaveAndReimport();
             }
+        }
+
+        /// <summary>Põe as luvas (SRG com dedos animados, se existirem) no lugar do modelo dos comandos.</summary>
+        public static void SetupGloves(Transform origin, Material militarMat)
+        {
+                        const string srgPath = "Assets/Equipamento/Luvas/SRG/Luvas_SRG.fbx";
+            BakeAxis(srgPath);
+            var srg = AssetDatabase.LoadAssetAtPath<GameObject>(srgPath);
+            var luvas = AssetDatabase.LoadAssetAtPath<GameObject>(CharDir + "/Luvas.fbx");
+            if (srg)
+            {
+                var gmat = GloveMaterial("Assets/Equipamento/Luvas/SRG");
+                AttachGlove(origin, "Right Controller", "XR Controller Right", srg, "Luva_D", gmat, true);
+                AttachGlove(origin, "Left Controller", "XR Controller Left", srg, "Luva_E", gmat, true);
+            }
+            else if (luvas)
+            {
+                AttachGlove(origin, "Right Controller", "XR Controller Right", luvas, "Luva_D", militarMat, false);
+                AttachGlove(origin, "Left Controller", "XR Controller Left", luvas, "Luva_E", militarMat, false);
+            }
+            else Debug.LogWarning("[Campo Teste] Não encontrei luvas.");
+
         }
 
         static Transform FindDeep(Transform root, string name)
@@ -213,6 +220,11 @@ namespace LeoVR.Weapons.EditorTools
                 r.shadowCastingMode = ShadowCastingMode.Off;
             }
             foreach (var c in mesh.GetComponentsInChildren<Collider>()) Object.DestroyImmediate(c);
+            if (srgGlove)
+            {
+                var drv = rootT.gameObject.AddComponent<HandPoseDriver>();
+                drv.hand = controllerName.StartsWith("Right") ? UnityEngine.XR.XRNode.RightHand : UnityEngine.XR.XRNode.LeftHand;
+            }
         }
 
         static Material LitMat(string path, Color c, float metal, float smooth)
@@ -245,7 +257,7 @@ namespace LeoVR.Weapons.EditorTools
             return m;
         }
 
-        static Material MilitarMaterial()
+        public static Material MilitarMaterial()
         {
             string texDir = CharDir + "/Texturas";
             string normalPath = texDir + "/Militar_normal.png";

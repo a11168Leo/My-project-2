@@ -271,6 +271,19 @@ namespace LeoVR.Weapons
             Destroy(c, 20f);
         }
 
+        /// <summary>Disparo de teste (menu Ferramentas > Teste > Disparar arma selecionada, em Play).</summary>
+        public void TestFire()
+        {
+            boltLocked = false;
+            if (!roundChambered)
+            {
+                var mag = CurrentMagazine;
+                if (mag == null || !mag.TryTakeRound()) { }
+                roundChambered = true;
+            }
+            Fire();
+        }
+
         // ---------- Ações dos botões ----------
         public void DropMagazine()
         {

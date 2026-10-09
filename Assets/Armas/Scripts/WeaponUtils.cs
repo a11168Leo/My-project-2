@@ -46,6 +46,19 @@ namespace LeoVR.Weapons
             return d.isValid && d.TryGetFeatureValue(CommonUsages.trigger, out float v) ? v : 0f;
         }
 
+        public static float Grip(XRNode? node)
+        {
+            if (node == null) return 0f;
+            var c = Ctrl(node.Value);
+            if (c != null)
+            {
+                var a = c.TryGetChildControl<AxisControl>("grip");
+                if (a != null) return a.ReadValue();
+            }
+            var d = InputDevices.GetDeviceAtXRNode(node.Value);
+            return d.isValid && d.TryGetFeatureValue(CommonUsages.grip, out float v) ? v : 0f;
+        }
+
         public static bool Button(XRNode? node, string controlName)
         {
             if (node == null) return false;
